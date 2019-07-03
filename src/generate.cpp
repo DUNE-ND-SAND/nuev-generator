@@ -36,8 +36,8 @@ int main(int argc, char* argv[])
 	// X-SEC
 	////////////////////////////////////
 
-	//const std::string fxsecname = "/wd/sw/GENIE/R-3_00_04/genie_xsec/v3_00_04/NULL/G1801a00000-k250-e1000/data/gxspl-FNALbig.xml";
-  const std::string fxsecname = "mu_e_geometry_v12.xml";
+	const std::string fxsecname = "/wd/sw/GENIE/R-3_00_04/genie_xsec/v3_00_04/NULL/G1801a00000-k250-e1000/data/gxspl-FNALbig.xml";
+  //const std::string fxsecname = "mu_e_geometry_v12.xml";
 
 	genie::utils::app_init::XSecTable(fxsecname, false);
  

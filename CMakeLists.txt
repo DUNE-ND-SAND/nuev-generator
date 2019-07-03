@@ -72,7 +72,7 @@ if(LOG4CPP_LIBRARIES)
 endif()
 
 #---Create  a main program using the library
-add_executable(generate ../src/generate.cpp)
+add_executable(generate ${CMAKE_CURRENT_SOURCE_DIR}/src/generate.cpp)
 #add_executable(Main MainEvent.cxx)
 target_link_libraries(generate ${ROOT_LIBRARIES} ${GENIE_LIBRARIES} ${LOG4CPP_LIBRARIES})
 
