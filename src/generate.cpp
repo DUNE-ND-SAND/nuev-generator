@@ -70,6 +70,8 @@ int main(int argc, char* argv[])
 
 	// set volume where events will be generated
 	geo_driver->SetTopVolName(tb->GetName());
+ 
+  std::cout << "Setting top volume to: " << tb->GetName() << " center (x,y,z): " << p_mst[0] << "; " << p_mst[1] << "; " << p_mst[2] << std::endl;
 
 	// set unities
 	geo_driver->SetLengthUnits(genie::utils::units::UnitFromString(lunits));
@@ -81,7 +83,7 @@ int main(int argc, char* argv[])
 	// FLUX
 	////////////////////////////////////
 	
-	const double beam_y_angle = -6./180. * TMath::Pi();
+	const double beam_y_angle = 6./180. * TMath::Pi();
 	//const double beam_y_angle = 0.;
 	//const double beam_radius = 300.;
 	const double beam_radius = 3.;
@@ -103,8 +105,8 @@ int main(int argc, char* argv[])
 	genie::flux::GCylindTH1Flux* flux_driver = new genie::flux::GCylindTH1Flux();
 
 	// nu beam direction
-	TVector3 nudir(1,0,0);
-	nudir.RotateZ(beam_y_angle);
+	TVector3 nudir(0,0,1);
+	nudir.RotateX(beam_y_angle);
 	flux_driver->SetNuDirection(nudir);
 
 	// beam radius
@@ -112,8 +114,8 @@ int main(int argc, char* argv[])
 
 	// beam spot
 	//TVector3 beamspot(-dist_from_kloe_center,4.33096000,7.39616250);
-	TVector3 beamspot(-dist_from_kloe_center,0.,0.);
-	beamspot.RotateZ(beam_y_angle);
+	TVector3 beamspot(0.,0.,-dist_from_kloe_center);
+	beamspot.RotateX(beam_y_angle);
 	beamspot.SetX(beamspot.X() + p_mst[0]*cmtom);
 	beamspot.SetY(beamspot.Y() + p_mst[1]*cmtom);
 	beamspot.SetZ(beamspot.Z() + p_mst[2]*cmtom);
@@ -161,7 +163,7 @@ int main(int argc, char* argv[])
 	// CONFIG OUTPUT
 	////////////////////////////////////
 
-	const std::string foutname = "data/ghep/numu_geoV12_1000.root";
+	const std::string foutname = "data/ghep/numu_geoV12_1000";
 	genie::NtpMCFormat_t kDefOptNtpFormat = genie::kNFGHEP;
 	const int run_num = 0;
 
