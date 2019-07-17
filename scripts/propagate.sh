@@ -8,7 +8,8 @@ macrolog="macro.log"
 
 if [ "${1}" == "" ] || [ "${2}" == "" ]
 then
-   echo "input file or geoemtry file missing."
+   echo -e "\e[5m\e[91mERROR\e[0m: input file or geoemtry file missing."
+   echo "propagate.sh <input file> <geometry file>"
    return 1
 fi 
 
@@ -18,13 +19,13 @@ geo=${2}
 
 if [ ! -f ${input} ]
 then
-   echo "file ${input} does not exist."
+   echo -e "\e[5m\e[91mERROR\e[0m: file ${input} does not exist."
    return 1
 fi
 
 if [ ! -f ${geo} ]
 then
-   echo "file ${geo} does not exist."
+   echo -e "\e[5m\e[91mERROR\e[0m: file ${geo} does not exist."
    return 1
 fi
 
@@ -32,7 +33,7 @@ res=$(which ${edepsim} 2> /dev/null)
 
 if [ "${res}" == "" ] 
 then
-	 echo "${edepsim} not exist. Please set the right environment."
+	 echo -e "\e[5m\e[91mERROR\e[0m: ${edepsim} not exist. Please set the right environment."
    return 1
 fi
 
@@ -40,7 +41,7 @@ res=$(which ${root} 2> /dev/null)
 
 if [ "${res}" == "" ] 
 then
-	 echo "${root} not exist. Please set the right environment."
+	 echo -e "\e[5m\e[91mERROR\e[0m: ${root} not exist. Please set the right environment."
    return 1
 fi
 
@@ -58,7 +59,7 @@ fi
 
 if [ ! -d ${odir} ]
 then
-	 echo "output directory ${odir} not exist. Please create it."
+	 echo "\e[5m\e[91mERROR\e[0m: output directory ${odir} not exist. Please create it."
    return 1
 fi
 
