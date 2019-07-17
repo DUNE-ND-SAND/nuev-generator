@@ -60,6 +60,7 @@ include_directories("${GENIE_INC_DIR}")
 
 #---Add LOG4CPP library
 set(LOG4CPP_DIR "$ENV{LOG4CPP}")
+set(LOG4CPP_INC_DIR "${LOG4CPP_DIR}/include")
 set(LOG4CPP_LIB_DIR "${LOG4CPP_DIR}/lib")
 set(LOG4CPP_LIBRARIES)
 find_library(LOG4CPP_LIBRARY log4cpp HINTS ${LOG4CPP_LIB_DIR})
@@ -70,6 +71,8 @@ find_library(LOG4CPP_LIBRARY log4cpp HINTS ${LOG4CPP_LIB_DIR})
 if(LOG4CPP_LIBRARIES)
     list(REMOVE_DUPLICATES LOG4CPP_LIBRARIES)
 endif()
+
+include_directories("${LOG4CPP_INC_DIR}")
 
 #---Create  a main program using the library
 add_executable(generate ${CMAKE_CURRENT_SOURCE_DIR}/src/generate.cpp)
