@@ -7,7 +7,7 @@ then
    return 1
 fi 
 
-script="$(pwd)/${BASH_SOURCE[0]}"
+script="${BASH_SOURCE[0]}"
 input=${1}
 geo=${2}
 
