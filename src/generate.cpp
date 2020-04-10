@@ -61,8 +61,8 @@ int main(int argc, char *argv[]) {
   // X-SEC
   ////////////////////////////////////
 
-  const std::string fxsecname_bigger = "/mnt/c/Linux/Dune/GENIE/lamp/Crosssections/genie_xsec/v3_00_06/NULL/G1802a00000-k250-e1000/data/gxspl-FNALbigger.xml.gz";
-  const std::string fxsecname_big = "/mnt/c/Linux/Dune/GENIE/lamp/Crosssections/genie_xsec/v3_00_06/NULL/G1802a00000-k250-e1000/data/gxspl-FNALbig.xml";
+  const std::string fxsecname_bigger = "/wd/dune-it/enurec/xsec/gxspl-FNALbigger.xml.gz";
+  const std::string fxsecname_big = "/wd/sw/GENIE/R-3_00_04/genie_xsec/v3_00_04/NULL/G1801a00000-k250-e1000/data/gxspl-FNALbig.xml";
   const std::string fxsecname_small = "/mnt/c/Linux/Dune/GENIE/lamp/Crosssections/genie_xsec/v3_00_06/NULL/G1802a00000-k250-e1000/data/gxspl-FNALsmall.xml";
   const std::string fxsecname_cust = "mu_e_geometry_v12.xml";
 
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
   // GEOMETRY
   ////////////////////////////////////
 
-  const std::string fgeoname = "/mnt/c/Linux/Dune/dunendggd/nd_hall_only_kloe_stt_full_ecal.gdml";
+  const std::string fgeoname = "/wd/dune-it/ext_bkg/geo/nd_hall_kloe_sttonly.gdml";
   const std::string lunits = "cm";
   const std::string dunits = "g_cm3";
 
@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
 
   TGeoManager *gm = geo_driver->GetGeometry();
   TGeoNavigator *nav = gm->GetCurrentNavigator();
-  nav->cd("volWorld/rockBox_lv_0/volDetEnclosure_0/volKLOE_0/kloe_calo_volume_0");
+  nav->cd("volWorld/rockBox_lv_0/volDetEnclosure_0/volKLOE_0/volSTTFULL_0");
   TGeoVolume *tb = reinterpret_cast<TGeoVolume *>(nav->GetCurrentVolume());
 
   double p_loc[] = {0, 0, 0};
@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
   const double beam_radius = 3.;
   const double dist_from_kloe_center = 3.;
   const std::string ffluxname_nu =
-      "/mnt/c/Linux/Dune/GENIE/lamp/Fluxes/histos_g4lbne_v3r5p4_QGSP_BERT_OptimizedEngineeredNov2017_neutrino_LBNEND_fastmc.root";
+      "/wd/dune-it/enurec/flux/histos_g4lbne_v3r5p4_QGSP_BERT_OptimizedEngineeredNov2017_neutrino_LBNEND_fastmc.root";
   const std::string ffluxname_anu =
       "/wd/dune-it/enurec/flux/"
       "histos_g4lbne_v3r5p4_QGSP_BERT_"
@@ -239,7 +239,7 @@ int main(int argc, char *argv[]) {
   ////////////////////////////////////
 
   const std::string foutname =
-      "/mnt/c/Linux/Dune/nuev-generator/data/numu_1000";
+      "/wd/dune-it/ext_bkg/files/genie/ghep/numu_100";
   genie::NtpMCFormat_t kDefOptNtpFormat = genie::kNFGHEP;
   const int run_num = 0;
 
@@ -264,6 +264,7 @@ int main(int argc, char *argv[]) {
 
   genie::EventRecord *event = 0;
   do {
+    std::cout << ievent << " of " << n_event << std::endl;
     event = mcjob_driver->GenerateEvent();
     ntpw.AddEventRecord(ievent, event);
     ievent++;
@@ -313,3 +314,5 @@ int main(int argc, char *argv[]) {
   std::cout << "***********************************" << std::endl;
   sw.Stop();
 }
+
+
