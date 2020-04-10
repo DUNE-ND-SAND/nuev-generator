@@ -259,7 +259,7 @@ int main(int argc, char *argv[]) {
   // GENERATE
   ////////////////////////////////////
 
-  const int n_event = 1000;
+  const int n_event = 10;
   int ievent = 0;
 
   genie::EventRecord *event = 0;
