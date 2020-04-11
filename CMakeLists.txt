@@ -42,7 +42,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 #---Define GENIE environment variables
 set(GENIE_DIR "$ENV{GENIE}")
-set(GENIE_INC_DIR "${GENIE_DIR}/include/GENIE")
+set(GENIE_INC_DIR "${GENIE_DIR}/src")
 set(GENIE_LIB_DIR "${GENIE_DIR}/lib")
 set(GENIE_LIBRARIES)
 foreach(_cpt GFwMsg GFwReg GFwAlg GFwInt GFwGHEP GFwNum GFwUtl GFwParDat GFwEG GFwNtp GPhXSIg GPhPDF GPhNuclSt GPhCmn GPhDcy GPhHadTransp GPhHadnz GPhDeEx GPhAMNGXS GPhAMNGEG GPhChmXS GPhCohXS GPhCohEG GPhDISXS GPhDISEG GPhDfrcXS GPhDfrcEG GPhGlwResXS GPhGlwResEG GPhIBDXS GPhIBDEG GPhMNucXS GPhMNucEG GPhMEL GPhNuElXS GPhNuElEG GPhQELXS GPhQELEG GPhResXS GPhResEG GPhStrXS GPhStrEG GPhNDcy GPhNNBarOsc GPhBDMXS GPhBDMEG GTlGeo GTlFlx)
