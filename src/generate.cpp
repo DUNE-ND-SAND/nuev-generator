@@ -239,7 +239,7 @@ int main(int argc, char *argv[]) {
   ////////////////////////////////////
 
   const std::string foutname =
-      "/wd/dune-it/ext_bkg/files/genie/ghep/numu_100";
+      "/wd/dune-it/ext_bkg/files/genie/ghep/numu_internal_10k";
   genie::NtpMCFormat_t kDefOptNtpFormat = genie::kNFGHEP;
   const int run_num = 0;
 
@@ -259,7 +259,7 @@ int main(int argc, char *argv[]) {
   // GENERATE
   ////////////////////////////////////
 
-  const int n_event = 10;
+  const int n_event = 10000;
   int ievent = 0;
 
   genie::EventRecord *event = 0;
