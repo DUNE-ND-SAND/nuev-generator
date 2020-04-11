@@ -6,7 +6,7 @@ res=$(which ${command} 2> /dev/null)
 
 if [ "${res}" == "" ] 
 then
-	 echo -e "\e[5m\e[91mERROR\e[0m: ${command} not exist. Please set the right environment."
+	 echo -e "\e[5m\e[91mERROR\e[0m: ${command} does not exist. Please set the right environment."
    return 1
 fi
 
@@ -15,7 +15,7 @@ input=${1}
 if [ "${input}" == "" ]
 then
    echo -e "\e[5m\e[91mERROR\e[0m: input file missing."
-   echo "convert.sh <input file>"
+   echo "source ${BASH_SOURCE[0]} <input file>"
    return 1
 elif [ ! -f "${input}" ]
 then
@@ -39,7 +39,7 @@ output="${odir}/${oname}"
 
 if [ -f "${output}" ]
 then
-   echo -e "\e[5m\e[91mERROR\e[0m: output file ${output} exist. Remove it to re-process."
+   echo -e "\e[5m\e[91mERROR\e[0m: output file ${output} exists. Remove it to re-process."
    return 1
 fi    
 
