@@ -1,6 +1,6 @@
 #!/bin/bash
 
-dir="/home/dune-it/data/ghep"
+dir="/wd/dune-it/enurec/prod/data/ghep"
 
 if [ "${1}" != "" ]
 then
