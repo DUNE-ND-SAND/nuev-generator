@@ -9,7 +9,7 @@ macrolog="macro.log"
 if [ "${1}" == "" ] || [ "${2}" == "" ]
 then
    echo -e "\e[5m\e[91mERROR\e[0m: input file or geoemtry file missing."
-   echo "propagate.sh <input file> <geometry file>"
+   echo "source ${BASH_SOURCE[0]} <input file> <geometry file>"
    return 1
 fi 
 
@@ -33,7 +33,7 @@ res=$(which ${edepsim} 2> /dev/null)
 
 if [ "${res}" == "" ] 
 then
-	 echo -e "\e[5m\e[91mERROR\e[0m: ${edepsim} not exist. Please set the right environment."
+	 echo -e "\e[5m\e[91mERROR\e[0m: ${edepsim} does not exist. Please set the right environment."
    return 1
 fi
 
@@ -41,7 +41,7 @@ res=$(which ${root} 2> /dev/null)
 
 if [ "${res}" == "" ] 
 then
-	 echo -e "\e[5m\e[91mERROR\e[0m: ${root} not exist. Please set the right environment."
+	 echo -e "\e[5m\e[91mERROR\e[0m: ${root} does not exist. Please set the right environment."
    return 1
 fi
 
@@ -59,13 +59,19 @@ fi
 
 if [ ! -d ${odir} ]
 then
-	 echo "\e[5m\e[91mERROR\e[0m: output directory ${odir} not exist. Please create it."
+	 echo "\e[5m\e[91mERROR\e[0m: output directory ${odir} does not exist. Please create it."
    return 1
 fi
 
 output="${odir}/${oname}"
 edepsimlogname=$(echo ${oname} | sed "s:root:log:g")
 edepsimlog="${macrodir}/logs/${edepsimlogname}"
+
+if [ -f ${output} ]
+then
+	 echo "\e[5m\e[91mERROR\e[0m: output file ${output} exists. Remove it to re-process."
+   return 1
+fi
 
 macroname=$(echo ${oname} | sed "s:root:mac:")
 macro="${macrodir}/${macroname}"
