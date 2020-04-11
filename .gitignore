@@ -2,4 +2,3 @@
 bin/*
 build/*
 data/*
-*.log
