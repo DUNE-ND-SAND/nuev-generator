@@ -31,15 +31,46 @@
 #include "Framework/Utils/XSecSplineList.h"
 #include "Framework/Utils/AppInit.h"
 #include "Framework/Utils/UnitUtils.h"
+#include "Framework/Utils/CmdLnArgParser.h"
+#include "Framework/Utils/PrintUtils.h"
 #include "Framework/Utils/RunOpt.h"
 
 #include "Framework/Algorithm/AlgConfigPool.h"
 
+
+
+
+void GetCommandLineArgs (int argc, char ** argv);
+void PrintSyntax        (void);
+
+Long_t run_num = 0;                     // run number
+
+
+//________________________________________________________________________________________
 int main(int argc, char *argv[]) {
   TStopwatch sw;
   sw.Start();
+  
+  ////////////////////////////////////
+  // PARSE COMMAND LINE ARGUMENTS
+  ////////////////////////////////////
+  
+  
+  GetCommandLineArgs(argc,argv);
 
-  genie::RunOpt::Instance()->ReadFromCommandLine(argc, argv);
+
+  genie::utils::app_init::MesgThresholds(genie::RunOpt::Instance()->MesgThresholdFiles());
+
+
+  ////////////////////////////////////
+  // SET TUNE AND EVENT GENERATOR LIST
+  ////////////////////////////////////
+
+//  genie::RunOpt::Instance()->SetEventGeneratorList("Default");
+//  genie::RunOpt::Instance()->SetTuneName("G18_02a_00_000");
+
+
+
 
   if (!genie::RunOpt::Instance()->Tune()) {
     std::cout << " No TuneId in RunOption" << std::endl;
@@ -61,9 +92,9 @@ int main(int argc, char *argv[]) {
   // X-SEC
   ////////////////////////////////////
 
-  const std::string fxsecname_bigger = "/wd/dune-it/enurec/xsec/gxspl-FNALbigger.xml.gz";
-  const std::string fxsecname_big = "/wd/sw/GENIE/R-3_00_04/genie_xsec/v3_00_04/NULL/G1801a00000-k250-e1000/data/gxspl-FNALbig.xml";
-  const std::string fxsecname_small = "/mnt/c/Linux/Dune/GENIE/lamp/Crosssections/genie_xsec/v3_00_06/NULL/G1802a00000-k250-e1000/data/gxspl-FNALsmall.xml";
+  const std::string fxsecname_bigger = "/data/genie_xsec/v3_00_06/NULL/G1802a00000-k250-e1000/data/gxspl-FNALbigger.xml";
+  const std::string fxsecname_big = "/data/genie_xsec/v3_00_06/NULL/G1802a00000-k250-e1000/data/gxspl-FNALbig.xml";
+  const std::string fxsecname_small = "/data/genie_xsec/v3_00_06/NULL/G1802a00000-k250-e1000/data/gxspl-FNALsmall.xml";
   const std::string fxsecname_cust = "mu_e_geometry_v12.xml";
 
   genie::utils::app_init::XSecTable(fxsecname_bigger, true);
@@ -76,11 +107,20 @@ int main(int argc, char *argv[]) {
   std::cout << "***********************************" << std::endl;
   std::cout << "***********************************" << std::endl;
 
+
+  ////////////////////////////////////
+  //  SET RUN NUMBER AND RANDOM SEED
+  ////////////////////////////////////
+
+//  const int run_num = 3;
+  const long int random_seed = 12345678 + run_num * 1234;
+  genie::utils::app_init::RandGen(random_seed);
+
   ////////////////////////////////////
   // GEOMETRY
   ////////////////////////////////////
 
-  const std::string fgeoname = "/wd/dune-it/ext_bkg/geo/nd_hall_kloe_sttonly.gdml";
+  const std::string fgeoname = "/data/geometries/nd_hall_kloe_sttonly.gdml";
   const std::string lunits = "cm";
   const std::string dunits = "g_cm3";
 
@@ -107,7 +147,7 @@ int main(int argc, char *argv[]) {
 
   // set unities
   geo_driver->SetLengthUnits(genie::utils::units::UnitFromString(lunits));
-  geo_driver->SetDensityUnits(genie::utils::units::UnitFromString(lunits));
+  geo_driver->SetDensityUnits(genie::utils::units::UnitFromString(dunits));
 
   const double mtocm = 100.;
   const double cmtom = 1. / mtocm;
@@ -128,9 +168,9 @@ int main(int argc, char *argv[]) {
   const double beam_radius = 3.;
   const double dist_from_kloe_center = 3.;
   const std::string ffluxname_nu =
-      "/wd/dune-it/enurec/flux/histos_g4lbne_v3r5p4_QGSP_BERT_OptimizedEngineeredNov2017_neutrino_LBNEND_fastmc.root";
+      "/data/flux/histos_g4lbne_v3r5p4_QGSP_BERT_OptimizedEngineeredNov2017_neutrino_LBNEND_fastmc.root";
   const std::string ffluxname_anu =
-      "/wd/dune-it/enurec/flux/"
+      "/data/flux/"
       "histos_g4lbne_v3r5p4_QGSP_BERT_"
       "OptimizedEngineeredNov2017_antineutrino_"
       "LBNEND_fastmc.root";
@@ -169,12 +209,23 @@ int main(int argc, char *argv[]) {
             << " " << beamspot.Z() << std::endl;
 
   // beam spectra
-  // flux_driver->AddEnergySpectrum (12, h_nue_flux);
-  // flux_driver->AddEnergySpectrum (-12, h_nuebar_flux);
+  flux_driver->AddEnergySpectrum (12, h_nue_flux);
+  flux_driver->AddEnergySpectrum (-12, h_nuebar_flux);
   flux_driver->AddEnergySpectrum(14, h_numu_flux);
-  // flux_driver->AddEnergySpectrum (-14, h_numubar_flux);
+  flux_driver->AddEnergySpectrum (-14, h_numubar_flux);
   // flux_driver->AddEnergySpectrum (16, h_nutau_flux);
   // flux_driver->AddEnergySpectrum (-16, h_nutaubar_flux);
+
+  // flux integral for normalization
+  double flux_integral=0.;
+  flux_integral+=h_nue_flux->Integral();
+  flux_integral+=h_nuebar_flux->Integral();
+  flux_integral+=h_numu_flux->Integral();
+  flux_integral+=h_numubar_flux->Integral();
+  // flux_integral+=h_nutau_flux->Integral();
+  // flux_integral+=h_nutaubar_flux->Integral();
+
+
 
   std::cout << "***********************************" << std::endl;
   std::cout << " finish reading fluxes " << std::endl;
@@ -238,10 +289,11 @@ int main(int argc, char *argv[]) {
   // CONFIG OUTPUT
   ////////////////////////////////////
 
-  const std::string foutname =
-      "/wd/dune-it/ext_bkg/files/genie/ghep/numu_internal_10k";
+  const std::string foutname = "numu_internal_10k";
+  
+  
   genie::NtpMCFormat_t kDefOptNtpFormat = genie::kNFGHEP;
-  const int run_num = 0;
+  // const int run_num = 0;
 
   genie::NtpWriter ntpw(kDefOptNtpFormat, run_num);
   ntpw.CustomizeFilenamePrefix(foutname);
@@ -294,6 +346,25 @@ int main(int argc, char *argv[]) {
   std::cout << "***********************************" << std::endl;
 
   ////////////////////////////////////
+  // CALC EXPOSURE
+  ////////////////////////////////////
+  
+  double n_pot=mcjob_driver->NFluxNeutrinos()/mcjob_driver->GlobProbScale()/flux_integral/(TMath::Pi()*TMath::Power(beam_radius,2.));
+
+  std::cout << "***********************************" << std::endl;
+  std::cout << " number of simulated NPOTs " << std::endl;
+  std::cout << "***********************************" << std::endl;
+  std::cout << "n_tot= " << mcjob_driver->NFluxNeutrinos() << std::endl;
+  std::cout << "p_scale= " << mcjob_driver->GlobProbScale() << std::endl;
+  std::cout << "flux_integral= " << flux_integral << std::endl;
+  std::cout << "beam_area= " << TMath::Pi()*TMath::Power(beam_radius,2.) << std::endl; 
+  std::cout << "n_pot= " << n_pot << std::endl;
+  std::cout << "***********************************" << std::endl;
+  std::cout << "***********************************" << std::endl;
+
+
+
+  ////////////////////////////////////
   // CLEAN-UP
   ////////////////////////////////////
 
@@ -314,3 +385,51 @@ int main(int argc, char *argv[]) {
   std::cout << "***********************************" << std::endl;
   sw.Stop();
 }
+
+//________________________________________________________________________________________
+void GetCommandLineArgs(int argc, char ** argv)
+{
+// Get the command line arguments
+
+
+  genie::RunOpt::Instance()->ReadFromCommandLine(argc, argv);
+
+  genie::CmdLnArgParser parser(argc,argv);
+
+  // help?
+  bool help = parser.OptionExists('h');
+  if(help) {
+      PrintSyntax();
+      exit(0);
+  }
+
+  //
+  // *** run number
+  //
+  if( parser.OptionExists('r') ) {
+    run_num = parser.ArgAsLong('r');
+    std::cout << "Reading MC run number: "<<run_num<<std::endl;  
+  }
+
+
+  return;
+}
+//________________________________________________________________________________________
+
+void PrintSyntax(void)
+{
+
+  
+  std::cout << "\n **Syntax** ";
+  std::cout << "\n generate  [-h]";
+  std::cout << "\n           [-r run#]";
+  std::cout << "\n";
+  std::cout << "\n";
+   
+}
+//________________________________________________________________________________________
+
+
+
+
+
