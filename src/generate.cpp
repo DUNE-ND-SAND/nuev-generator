@@ -37,9 +37,6 @@
 
 #include "Framework/Algorithm/AlgConfigPool.h"
 
-
-
-
 void GetCommandLineArgs (int argc, char ** argv);
 void PrintSyntax        (void);
 
@@ -67,16 +64,14 @@ int main(int argc, char *argv[]) {
   ////////////////////////////////////
 
 //  genie::RunOpt::Instance()->SetEventGeneratorList("Default");
-//  genie::RunOpt::Instance()->SetTuneName("G18_02a_00_000");
-
-
-
 
   if (!genie::RunOpt::Instance()->Tune()) {
     std::cout << " No TuneId in RunOption" << std::endl;
     exit(-1);
   }
   genie::RunOpt::Instance()->BuildTune();
+
+
 
   ////////////////////////////////////
   // VERBOSITY
@@ -92,12 +87,22 @@ int main(int argc, char *argv[]) {
   // X-SEC
   ////////////////////////////////////
 
-  const std::string fxsecname_bigger = "/data/genie_xsec/v3_00_06/NULL/G1802a00000-k250-e1000/data/gxspl-FNALbigger.xml";
-  const std::string fxsecname_big = "/data/genie_xsec/v3_00_06/NULL/G1802a00000-k250-e1000/data/gxspl-FNALbig.xml";
-  const std::string fxsecname_small = "/data/genie_xsec/v3_00_06/NULL/G1802a00000-k250-e1000/data/gxspl-FNALsmall.xml";
-  const std::string fxsecname_cust = "mu_e_geometry_v12.xml";
+  std::string tune_name = genie::RunOpt::Instance()->Tune()->Name();
+  std::size_t found;
+  while(1){
+    found = tune_name.find("_");
+    if(found==std::string::npos)break;
+    tune_name.erase(found,1);
+  }
+  
+  std::string fxsecdir = "/data/genie_xsec/v3_00_06/NULL/";
+  fxsecdir += tune_name;
+  fxsecdir += "-k250-e1000/data/";
+  
+  std::string fxsecname = "gxspl-FNALbigger.xml";
+  fxsecname.insert(0,fxsecdir);
 
-  genie::utils::app_init::XSecTable(fxsecname_bigger, true);
+  genie::utils::app_init::XSecTable(fxsecname, true);
 
   std::cout << "***********************************" << std::endl;
   std::cout << " finish reading cross sections " << std::endl;
@@ -112,7 +117,6 @@ int main(int argc, char *argv[]) {
   //  SET RUN NUMBER AND RANDOM SEED
   ////////////////////////////////////
 
-//  const int run_num = 3;
   const long int random_seed = 12345678 + run_num * 1234;
   genie::utils::app_init::RandGen(random_seed);
 
@@ -349,15 +353,19 @@ int main(int argc, char *argv[]) {
   // CALC EXPOSURE
   ////////////////////////////////////
   
-  double n_pot=mcjob_driver->NFluxNeutrinos()/mcjob_driver->GlobProbScale()/flux_integral/(TMath::Pi()*TMath::Power(beam_radius,2.));
+  double n_tot = mcjob_driver->NFluxNeutrinos();
+  double p_scale = mcjob_driver->GlobProbScale();
+  double beam_area = TMath::Pi()*TMath::Power(beam_radius,2.);
+  double n_pot = n_tot/p_scale/flux_integral/beam_area;
 
   std::cout << "***********************************" << std::endl;
   std::cout << " number of simulated NPOTs " << std::endl;
   std::cout << "***********************************" << std::endl;
-  std::cout << "n_tot= " << mcjob_driver->NFluxNeutrinos() << std::endl;
-  std::cout << "p_scale= " << mcjob_driver->GlobProbScale() << std::endl;
+  std::cout << "n_run= "<< run_num <<std::endl;
+  std::cout << "n_tot= " << n_tot << std::endl;
+  std::cout << "p_scale= " << p_scale << std::endl;
   std::cout << "flux_integral= " << flux_integral << std::endl;
-  std::cout << "beam_area= " << TMath::Pi()*TMath::Power(beam_radius,2.) << std::endl; 
+  std::cout << "beam_area= " << beam_area << std::endl; 
   std::cout << "n_pot= " << n_pot << std::endl;
   std::cout << "***********************************" << std::endl;
   std::cout << "***********************************" << std::endl;
@@ -423,6 +431,7 @@ void PrintSyntax(void)
   std::cout << "\n **Syntax** ";
   std::cout << "\n generate  [-h]";
   std::cout << "\n           [-r run#]";
+  std::cout << "\n           [--tune tune]";
   std::cout << "\n";
   std::cout << "\n";
    
