@@ -353,10 +353,10 @@ int main(int argc, char *argv[]) {
   // CALC EXPOSURE
   ////////////////////////////////////
   
-  double n_tot = mcjob_driver->NFluxNeutrinos();
+  long int n_tot = mcjob_driver->NFluxNeutrinos();
   double p_scale = mcjob_driver->GlobProbScale();
   double beam_area = TMath::Pi()*TMath::Power(beam_radius,2.);
-  double n_pot = n_tot/p_scale/flux_integral/beam_area;
+  double n_pot = (double)n_tot/p_scale/flux_integral/beam_area;
 
   std::cout << "***********************************" << std::endl;
   std::cout << " number of simulated NPOTs " << std::endl;
