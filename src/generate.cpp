@@ -64,6 +64,8 @@ std::string     gOptGeomTopVol     = "volSTTFULL";
 
 std::string     gOptInpXSecFile;   // do not initialize
 
+std::string     gOptDetectorLocation = "DUNE-NearDet";
+
 /*  
   const std::string ffluxname_nu =
       "/data/flux/histos_g4lbne_v3r5p4_QGSP_BERT_OptimizedEngineeredNov2017_neutrino_LBNEND_fastmc.root";
@@ -353,7 +355,7 @@ int main(int argc, char *argv[]) {
 #ifdef WITH_DK2NU  
   else if (gOptFluxFileType.compare("gdk2nu")==0){
     gdk2nu = new genie::flux::GDk2NuFlux();
-//    gdk2nu->LoadBeamSimData(gOptFluxFileName,cfg);
+    gdk2nu->LoadBeamSimData(gOptFluxFileName,gOptDetectorLocation);
     flux_driver = dynamic_cast<genie::GFluxI*>(gdk2nu);
   }
 #endif  
@@ -566,6 +568,12 @@ void GetCommandLineArgs(int argc, char ** argv)
     gOptGeomFileName = parser.ArgAsString('g');
     std::cout << "Reading geometry file name: "<<gOptGeomFileName <<std::endl;
   }
+#ifdef WITH_DK2NU  
+  if( parser.OptionExists('l') ) {
+    gOptDetectorLocation = parser.ArgAsString('l');
+    std::cout << "Reading detector location: "<<gOptDetectorLocation <<std::endl;
+  }  
+#endif  
   if( parser.OptionExists('n') ) {
     gOptNEvents = parser.ArgAsLong('n');
     std::cout << "Reading number of events: "<<gOptNEvents <<std::endl;  
@@ -606,7 +614,10 @@ void PrintSyntax(void)
   std::cout << "\n **Syntax** ";
   std::cout << "\n generate  [-h]";
   std::cout << "\n           [-f type:filename]";
-  std::cout << "\n           [-g geofilename]";      
+  std::cout << "\n           [-g geofilename]";   
+#ifdef WITH_DK2NU   
+  std::cout << "\n           [-l detector_location]";   
+#endif  
   std::cout << "\n           [-n nevents]";    
   std::cout << "\n           [-o filemane]";      
   std::cout << "\n           [-p nulist]";  
@@ -619,7 +630,6 @@ void PrintSyntax(void)
   std::cout << "\n";
    
 }
-
 
 
 //____________________________________________________________________________
