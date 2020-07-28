@@ -1,4 +1,5 @@
 // Copyright 2019 Matteo Tenti - INFN-BO
+//                Carla Distefano - INFN-LNS
 //
 // generate muon neutrino events on KLOE detector
 //
@@ -25,6 +26,7 @@
 #include "Tools/Flux/GCylindTH1Flux.h"
 #include "Tools/Geometry/ROOTGeomAnalyzer.h"
 #include "Framework/EventGen/EventRecord.h"
+#include "Framework/EventGen/GFluxI.h"
 #include "Framework/EventGen/GMCJDriver.h"
 #include "Framework/Ntuple/NtpWriter.h"
 #include "Framework/Ntuple/NtpMCFormat.h"
@@ -33,15 +35,46 @@
 #include "Framework/Utils/UnitUtils.h"
 #include "Framework/Utils/CmdLnArgParser.h"
 #include "Framework/Utils/PrintUtils.h"
+#include "Framework/Utils/StringUtils.h"
 #include "Framework/Utils/RunOpt.h"
 
 #include "Framework/Algorithm/AlgConfigPool.h"
 
+#ifdef WITH_DK2NU
+#include "dk2nu/genie/GDk2NuFlux.h"
+#endif
+
+
 void GetCommandLineArgs (int argc, char ** argv);
 void PrintSyntax        (void);
 
-Long_t run_num = 0;                     // run number
+genie::PDGCodeList * 		GetNeutrinoCodes(void);
 
+Long_t   	gOptRunNum = 0;                     // run number
+
+int             gOptNEvents = 10000;
+std::string   	gOptNuPdgCodeList  = "-12,12,-14,14";
+
+std::string	gOptFluxFileType   = "histo";
+std::string 	gOptFluxFileName   = "/data/flux/histos_g4lbne_v3r5p4_QGSP_BERT_OptimizedEngineeredNov2017_neutrino_LBNEND_fastmc.root";
+std::string	gOptOutFileName    = "numu_internal_10k";
+
+std::string     gOptGeomFileName   = "/data/geometries/nd_hall_kloe_sttonly.gdml";
+std::string     gOptGeomTopVol     = "volSTTFULL";   
+
+std::string     gOptInpXSecFile;   // do not initialize
+
+/*  
+  const std::string ffluxname_nu =
+      "/data/flux/histos_g4lbne_v3r5p4_QGSP_BERT_OptimizedEngineeredNov2017_neutrino_LBNEND_fastmc.root";
+  const std::string ffluxname_anu =
+      "/data/flux/"
+      "histos_g4lbne_v3r5p4_QGSP_BERT_"
+      "OptimizedEngineeredNov2017_antineutrino_"
+      "LBNEND_fastmc.root";
+  
+//  const std::string ffluxname_flat = "/home/NEUTRINO/cardis/flat_flux.root";   
+*/
 
 //________________________________________________________________________________________
 int main(int argc, char *argv[]) {
@@ -63,7 +96,6 @@ int main(int argc, char *argv[]) {
   // SET TUNE AND EVENT GENERATOR LIST
   ////////////////////////////////////
 
-//  genie::RunOpt::Instance()->SetEventGeneratorList("Default");
 
   if (!genie::RunOpt::Instance()->Tune()) {
     std::cout << " No TuneId in RunOption" << std::endl;
@@ -87,22 +119,25 @@ int main(int argc, char *argv[]) {
   // X-SEC
   ////////////////////////////////////
 
-  std::string tune_name = genie::RunOpt::Instance()->Tune()->Name();
-  std::size_t found;
-  while(1){
-    found = tune_name.find("_");
-    if(found==std::string::npos)break;
-    tune_name.erase(found,1);
+  if(gOptInpXSecFile.size()==0){
+    std::string tune_name = genie::RunOpt::Instance()->Tune()->Name();
+    std::size_t found;
+    while(1){
+      found = tune_name.find("_");
+      if(found==std::string::npos)break;
+      tune_name.erase(found,1);
+    }
+  
+    std::string fxsecdir = "/data/genie_xsec/v3_00_06/NULL/";
+    fxsecdir += tune_name;
+    fxsecdir += "-k250-e1000/data/";
+  
+    gOptInpXSecFile = "gxspl-FNALbigger.xml";
+    gOptInpXSecFile.insert(0,fxsecdir);  
   }
-  
-  std::string fxsecdir = "/data/genie_xsec/v3_00_06/NULL/";
-  fxsecdir += tune_name;
-  fxsecdir += "-k250-e1000/data/";
-  
-  std::string fxsecname = "gxspl-FNALbigger.xml";
-  fxsecname.insert(0,fxsecdir);
 
-  genie::utils::app_init::XSecTable(fxsecname, true);
+
+  genie::utils::app_init::XSecTable(gOptInpXSecFile, true);
 
   std::cout << "***********************************" << std::endl;
   std::cout << " finish reading cross sections " << std::endl;
@@ -112,18 +147,18 @@ int main(int argc, char *argv[]) {
   std::cout << "***********************************" << std::endl;
   std::cout << "***********************************" << std::endl;
 
-
+  
   ////////////////////////////////////
   //  SET RUN NUMBER AND RANDOM SEED
   ////////////////////////////////////
 
-  const long int random_seed = 12345678 + run_num * 1234;
+  const long int random_seed = 12345678 + gOptRunNum * 1234;
   genie::utils::app_init::RandGen(random_seed);
 
   ////////////////////////////////////
   // GEOMETRY
   ////////////////////////////////////
-
+/*
   const std::string fgeoname = "/data/geometries/nd_hall_kloe_sttonly.gdml";
   const std::string lunits = "cm";
   const std::string dunits = "g_cm3";
@@ -136,18 +171,63 @@ int main(int argc, char *argv[]) {
   TGeoNavigator *nav = gm->GetCurrentNavigator();
   nav->cd("volWorld/rockBox_lv_0/volDetEnclosure_0/volKLOE_0/volSTTFULL_0");
   TGeoVolume *tb = reinterpret_cast<TGeoVolume *>(nav->GetCurrentVolume());
+*/
+
+
+//  const std::string fgeoname = "/data/geometries/standardGeo13_ECAL3DST.gdml";
+  const std::string lunits = "cm";
+  const std::string dunits = "g_cm3";
+
+  // create geometry driver
+  genie::geometry::ROOTGeomAnalyzer *geo_driver =
+      new genie::geometry::ROOTGeomAnalyzer(gOptGeomFileName);
+
+/*
+
+  TGeoManager *gm = geo_driver->GetGeometry();
+  TGeoNavigator *nav = gm->GetCurrentNavigator();
+  nav->cd("volDetEnclosure/volKLOE_0/volMainDet_3DST_0/vol3DST_0");  
+//  nav->cd("volDetEnclosure_0/volKLOE_0");
+  TGeoVolume *tb = reinterpret_cast<TGeoVolume *>(nav->GetCurrentVolume());
 
   double p_loc[] = {0, 0, 0};
   double p_mst[] = {0, 0, 0};
 
+
   nav->LocalToMaster(p_loc, p_mst);
 
-  // set volume where events will be generated
-  geo_driver->SetTopVolName(tb->GetName());
+//  geo_driver->SetTopVolName(tb->GetName());
 
   std::cout << "Setting top volume to: " << tb->GetName()
             << " center (x,y,z): " << p_mst[0] << "; " << p_mst[1] << "; "
             << p_mst[2] << std::endl;
+*/
+
+
+
+
+  geo_driver->SetTopVolName(gOptGeomTopVol);
+
+
+  TGeoShape * shape= geo_driver->GetGeometry()->GetTopVolume()->GetShape();
+  TGeoBBox* box = (TGeoBBox*) shape;
+  double *orig = (double*)box->GetOrigin();
+    
+  TVector3 TopVolCenter;
+  TopVolCenter.SetXYZ(orig[0],orig[1],orig[2]); 
+
+  geo_driver->Top2Master(TopVolCenter);
+
+  std::cout << "Setting top volume to: " << gOptGeomTopVol << std::endl;
+  std::cout << "center (x,y,z): " << TopVolCenter.X() << "; " << TopVolCenter.Y() << "; "
+            << TopVolCenter.Z() << std::endl;
+	    
+  std::cout << "size (x,y,z): " << 2.*box->GetDX() << "; " << 2.*box->GetDY() << "; "
+            << 2.*box->GetDZ() << std::endl;
+	    
+	    
+  geo_driver->GetGeometry()->GetTopVolume()->Weight();
+
 
   // set unities
   geo_driver->SetLengthUnits(genie::utils::units::UnitFromString(lunits));
@@ -171,64 +251,114 @@ int main(int argc, char *argv[]) {
   const double beam_y_angle = 6. / 180. * TMath::Pi();
   const double beam_radius = 3.;
   const double dist_from_kloe_center = 3.;
-  const std::string ffluxname_nu =
-      "/data/flux/histos_g4lbne_v3r5p4_QGSP_BERT_OptimizedEngineeredNov2017_neutrino_LBNEND_fastmc.root";
-  const std::string ffluxname_anu =
-      "/data/flux/"
-      "histos_g4lbne_v3r5p4_QGSP_BERT_"
-      "OptimizedEngineeredNov2017_antineutrino_"
-      "LBNEND_fastmc.root";
+  
 
-  TFile fflux(ffluxname_nu.c_str());
+  // create the flux driver
+  
+  genie::GFluxI* flux_driver;
+  
+  genie::flux::GCylindTH1Flux *cylindTH1Flux;
+#ifdef WITH_DK2NU
+  genie::flux::GDk2NuFlux *gdk2nu;
+#endif
+  
+  double flux_integral=0.;
 
-  TH1D *h_numu_flux = reinterpret_cast<TH1D *>(fflux.Get("numu_flux"));
-  TH1D *h_numubar_flux = reinterpret_cast<TH1D *>(fflux.Get("numubar_flux"));
-  TH1D *h_nue_flux = reinterpret_cast<TH1D *>(fflux.Get("nue_flux"));
-  TH1D *h_nuebar_flux = reinterpret_cast<TH1D *>(fflux.Get("nuebar_flux"));
-  TH1D *h_nutau_flux = reinterpret_cast<TH1D *>(fflux.Get("nutau_flux"));
-  TH1D *h_nutaubar_flux = reinterpret_cast<TH1D *>(fflux.Get("nutaubar_flux"));
+  TH1D *h_numu_flux;
+  TH1D *h_numubar_flux;
+  TH1D *h_nue_flux;
+  TH1D *h_nuebar_flux;
+  TH1D *h_nutau_flux;
+  TH1D *h_nutaubar_flux;
 
-  // create flux driver
-  genie::flux::GCylindTH1Flux *flux_driver = new genie::flux::GCylindTH1Flux();
+  TFile * fflux;  
 
-  // nu beam direction
-  TVector3 nudir(0, 0, 1);
-  nudir.RotateX(beam_y_angle);
-  flux_driver->SetNuDirection(nudir);
+  if(gOptFluxFileType.compare("histo")==0){     
+  
+    fflux = new TFile(gOptFluxFileName.c_str());
+    h_numu_flux = reinterpret_cast<TH1D *>(fflux->Get("numu_flux"));
+    h_numubar_flux = reinterpret_cast<TH1D *>(fflux->Get("numubar_flux"));
+    h_nue_flux = reinterpret_cast<TH1D *>(fflux->Get("nue_flux"));
+    h_nuebar_flux = reinterpret_cast<TH1D *>(fflux->Get("nuebar_flux"));
+    h_nutau_flux = reinterpret_cast<TH1D *>(fflux->Get("nutau_flux"));
+    h_nutaubar_flux = reinterpret_cast<TH1D *>(fflux->Get("nutaubar_flux"));
+  
+    cylindTH1Flux = new genie::flux::GCylindTH1Flux();
 
-  // beam radius
-  flux_driver->SetTransverseRadius(beam_radius);
+    // nu beam direction
+    TVector3 nudir(0, 0, 1);
+    nudir.RotateX(beam_y_angle);
+    cylindTH1Flux->SetNuDirection(nudir);
 
-  // beam spot
-  TVector3 beamspot(0., 0., -dist_from_kloe_center);
-  beamspot.RotateX(beam_y_angle);
-  beamspot.SetX(beamspot.X() + p_mst[0] * cmtom);
-  beamspot.SetY(beamspot.Y() + p_mst[1] * cmtom);
-  beamspot.SetZ(beamspot.Z() + p_mst[2] * cmtom);
-  flux_driver->SetBeamSpot(beamspot);
+    // beam radius
+    cylindTH1Flux->SetTransverseRadius(beam_radius);
 
-  std::cout << "beam directorion: " << nudir.X() << " " << nudir.Y() << " "
+    // beam spot
+    TVector3 beamspot(0., 0., -dist_from_kloe_center);
+    beamspot.RotateX(beam_y_angle);
+    beamspot.SetX(beamspot.X() + TopVolCenter.X() * cmtom);
+    beamspot.SetY(beamspot.Y() + TopVolCenter.Y() * cmtom);
+    beamspot.SetZ(beamspot.Z() + TopVolCenter.Z() * cmtom);
+    
+    cylindTH1Flux->SetBeamSpot(beamspot);
+
+    std::cout << "beam direction: " << nudir.X() << " " << nudir.Y() << " "
             << nudir.Z() << std::endl;
-  std::cout << "beam center     : " << beamspot.X() << " " << beamspot.Y()
+    std::cout << "beam center     : " << beamspot.X() << " " << beamspot.Y()
             << " " << beamspot.Z() << std::endl;
 
   // beam spectra
-  flux_driver->AddEnergySpectrum (12, h_nue_flux);
-  flux_driver->AddEnergySpectrum (-12, h_nuebar_flux);
-  flux_driver->AddEnergySpectrum(14, h_numu_flux);
-  flux_driver->AddEnergySpectrum (-14, h_numubar_flux);
-  // flux_driver->AddEnergySpectrum (16, h_nutau_flux);
-  // flux_driver->AddEnergySpectrum (-16, h_nutaubar_flux);
 
-  // flux integral for normalization
-  double flux_integral=0.;
-  flux_integral+=h_nue_flux->Integral();
-  flux_integral+=h_nuebar_flux->Integral();
-  flux_integral+=h_numu_flux->Integral();
-  flux_integral+=h_numubar_flux->Integral();
-  // flux_integral+=h_nutau_flux->Integral();
-  // flux_integral+=h_nutaubar_flux->Integral();
 
+    genie::PDGCodeList * neutrinos = GetNeutrinoCodes();
+    genie::PDGCodeList::const_iterator nuiter;
+    for(nuiter = neutrinos->begin(); nuiter != neutrinos->end(); ++nuiter) {
+      int nupdgc  = *nuiter;
+      std::cout<<nupdgc<<std::endl;
+    
+      if(nupdgc==12){
+        std::cout << "adding nu_e" <<std::endl;
+        cylindTH1Flux->AddEnergySpectrum (12, h_nue_flux);
+        flux_integral+=h_nue_flux->Integral();    
+      }
+      if(nupdgc==-12){
+        std::cout << "adding nu_e_bar" <<std::endl;
+        cylindTH1Flux->AddEnergySpectrum (-12, h_nuebar_flux);
+        flux_integral+=h_nuebar_flux->Integral();    
+      }
+      if(nupdgc==14){
+        std::cout << "adding nu_mu" <<std::endl;    
+        cylindTH1Flux->AddEnergySpectrum(14, h_numu_flux);
+        flux_integral+=h_numu_flux->Integral();      
+      }
+      if(nupdgc==-14){
+        std::cout << "adding nu_mu_bar" <<std::endl;    
+        cylindTH1Flux->AddEnergySpectrum (-14, h_numubar_flux);
+        flux_integral+=h_numubar_flux->Integral();      
+      }
+      if(nupdgc==16){
+        std::cout << "adding nu_tau" <<std::endl;    
+        cylindTH1Flux->AddEnergySpectrum (16, h_nutau_flux);
+        flux_integral+=h_nutau_flux->Integral();
+      }
+      if(nupdgc==-16){
+        std::cout << "adding nu_tau_bar" <<std::endl;    
+        cylindTH1Flux->AddEnergySpectrum (-16, h_nutaubar_flux);
+        flux_integral+=h_nutaubar_flux->Integral();
+      }
+    }
+
+    flux_driver = dynamic_cast<genie::GFluxI*>(cylindTH1Flux);
+  } 
+  else if (gOptFluxFileType.compare("gdk2nu")==0){
+    gdk2nu = new genie::flux::GDk2NuFlux();
+//    gdk2nu->LoadBeamSimData(gOptFluxFileName,cfg);
+    flux_driver = dynamic_cast<genie::GFluxI*>(gdk2nu);
+  }
+  else{
+    std::cout << "unknown flux file type: exiting...";
+    exit(1);   
+  }
 
 
   std::cout << "***********************************" << std::endl;
@@ -246,7 +376,10 @@ int main(int argc, char *argv[]) {
   genie::GMCJDriver *mcjob_driver = new genie::GMCJDriver();
   mcjob_driver->SetEventGeneratorList(
       genie::RunOpt::Instance()->EventGeneratorList());
+  
   mcjob_driver->UseFluxDriver(flux_driver);
+  
+  
   mcjob_driver->UseGeomAnalyzer(geo_driver);
 
   // If you supply the maximum path lengths for all materials in your geometry
@@ -293,14 +426,10 @@ int main(int argc, char *argv[]) {
   // CONFIG OUTPUT
   ////////////////////////////////////
 
-  const std::string foutname = "numu_internal_10k";
-  
-  
   genie::NtpMCFormat_t kDefOptNtpFormat = genie::kNFGHEP;
-  // const int run_num = 0;
 
-  genie::NtpWriter ntpw(kDefOptNtpFormat, run_num);
-  ntpw.CustomizeFilenamePrefix(foutname);
+  genie::NtpWriter ntpw(kDefOptNtpFormat, gOptRunNum);
+  ntpw.CustomizeFilenamePrefix(gOptOutFileName);
   ntpw.Initialize();
 
   std::cout << "***********************************" << std::endl;
@@ -315,17 +444,16 @@ int main(int argc, char *argv[]) {
   // GENERATE
   ////////////////////////////////////
 
-  const int n_event = 10000;
   int ievent = 0;
 
   genie::EventRecord *event = 0;
   do {
-    std::cout << ievent << " of " << n_event << std::endl;
+    std::cout << ievent << " of " << gOptNEvents << std::endl;
     event = mcjob_driver->GenerateEvent();
     ntpw.AddEventRecord(ievent, event);
     ievent++;
     delete event;
-  } while (ievent < n_event);
+  } while (ievent < gOptNEvents);
 
   std::cout << "***********************************" << std::endl;
   std::cout << " finish generating events " << std::endl;
@@ -353,23 +481,28 @@ int main(int argc, char *argv[]) {
   // CALC EXPOSURE
   ////////////////////////////////////
   
-  long int n_tot = mcjob_driver->NFluxNeutrinos();
-  double p_scale = mcjob_driver->GlobProbScale();
-  double beam_area = TMath::Pi()*TMath::Power(beam_radius,2.);
-  double n_pot = (double)n_tot/p_scale/flux_integral/beam_area;
 
-  std::cout << "***********************************" << std::endl;
-  std::cout << " number of simulated NPOTs " << std::endl;
-  std::cout << "***********************************" << std::endl;
-  std::cout << "n_run= "<< run_num <<std::endl;
-  std::cout << "n_tot= " << n_tot << std::endl;
-  std::cout << "p_scale= " << p_scale << std::endl;
-  std::cout << "flux_integral= " << flux_integral << std::endl;
-  std::cout << "beam_area= " << beam_area << std::endl; 
-  std::cout << "n_pot= " << n_pot << std::endl;
-  std::cout << "***********************************" << std::endl;
-  std::cout << "***********************************" << std::endl;
 
+  if(gOptFluxFileType.compare("histo")==0){
+    long int n_tot = mcjob_driver->NFluxNeutrinos();
+    double p_scale = mcjob_driver->GlobProbScale();
+    double beam_area = TMath::Pi()*TMath::Power(beam_radius,2.);
+    double n_pot = (double)n_tot/p_scale/flux_integral/beam_area;
+  
+  
+    std::cout << "***********************************" << std::endl;
+    std::cout << " number of simulated NPOTs " << std::endl;
+    std::cout << "***********************************" << std::endl;
+    std::cout << "n_run= "<< gOptRunNum <<std::endl;
+    std::cout << "n_tot= " << n_tot << std::endl;
+    std::cout << "p_scale= " << p_scale << std::endl;
+    std::cout << "flux_integral= " << flux_integral << std::endl;
+    std::cout << "beam_area= " << beam_area << std::endl; 
+    std::cout << "n_pot= " << n_pot << std::endl;
+    std::cout << "***********************************" << std::endl;
+    std::cout << "***********************************" << std::endl;
+    
+  }
 
 
   ////////////////////////////////////
@@ -379,6 +512,12 @@ int main(int argc, char *argv[]) {
   delete geo_driver;
   delete flux_driver;
   delete mcjob_driver;
+  
+  if(gOptFluxFileType.compare("histo")==0) {
+    delete fflux;
+  }
+  
+  
 
   std::cout << "***********************************" << std::endl;
   std::cout << " finish cleaning " << std::endl;
@@ -400,8 +539,6 @@ void GetCommandLineArgs(int argc, char ** argv)
 // Get the command line arguments
 
 
-  genie::RunOpt::Instance()->ReadFromCommandLine(argc, argv);
-
   genie::CmdLnArgParser parser(argc,argv);
 
   // help?
@@ -411,14 +548,50 @@ void GetCommandLineArgs(int argc, char ** argv)
       exit(0);
   }
 
-  //
-  // *** run number
-  //
-  if( parser.OptionExists('r') ) {
-    run_num = parser.ArgAsLong('r');
-    std::cout << "Reading MC run number: "<<run_num<<std::endl;  
+  if( parser.OptionExists('f') ) {
+    std::string flux = parser.ArgAsString('f');
+    std::size_t found = flux.find(":");
+    if (found==std::string::npos){
+      std::cout << "Error in the format of -f option, exiting..."<<std::endl;  
+      exit(1);
+    }
+    gOptFluxFileType = flux.substr (0,found);
+    gOptFluxFileName = flux.substr (found+1,flux.size()-found);
+    gOptFluxFileType = genie::utils::str::ToLower(gOptFluxFileType);
+    std::cout << "Reading neutrino flux type and filename: "<<gOptFluxFileType<<" "<<gOptFluxFileName<<std::endl;
   }
+  if( parser.OptionExists('g') ) {
+    gOptGeomFileName = parser.ArgAsString('g');
+    std::cout << "Reading geometry file name: "<<gOptGeomFileName <<std::endl;
+  }
+  if( parser.OptionExists('n') ) {
+    gOptNEvents = parser.ArgAsLong('n');
+    std::cout << "Reading number of events: "<<gOptNEvents <<std::endl;  
+  }
+  if( parser.OptionExists('o') ) {
+    gOptOutFileName = parser.ArgAsString('o');
+    std::cout << "Reading output file name: "<<gOptOutFileName <<std::endl;
+  }  
+  if( parser.OptionExists('p') ) {
+    gOptNuPdgCodeList = parser.ArgAsString('p');
+    std::cout << "Reading neutrino PDG codes: "<<gOptNuPdgCodeList <<std::endl;
+  }
+  if( parser.OptionExists('r') ) {
+    gOptRunNum = parser.ArgAsLong('r');
+    std::cout << "Reading MC run number: "<<gOptRunNum<<std::endl;  
+  }
+  if( parser.OptionExists('t') ) {
+    gOptGeomTopVol = parser.ArgAsString('t');
+    std::cout << "Reading geometry top volume name: "<<gOptGeomTopVol <<std::endl;
+  }
+  if( parser.OptionExists("cross-sections") ) {
+    std::cout << "Reading cross-section file"<<std::endl;;
+    gOptInpXSecFile = parser.ArgAsString("cross-sections");
+  } 
+  
+  
 
+  genie::RunOpt::Instance()->ReadFromCommandLine(argc, argv);
 
   return;
 }
@@ -430,15 +603,35 @@ void PrintSyntax(void)
   
   std::cout << "\n **Syntax** ";
   std::cout << "\n generate  [-h]";
+  std::cout << "\n           [-f type:filename]";
+  std::cout << "\n           [-g geofilename]";      
+  std::cout << "\n           [-n nevents]";    
+  std::cout << "\n           [-o filemane]";      
+  std::cout << "\n           [-p nulist]";  
   std::cout << "\n           [-r run#]";
+  std::cout << "\n           [-t topvolname]";    
+  std::cout << "\n           [--cross-sections xml_file]";  
+  std::cout << "\n           [--event-generator-list]";
   std::cout << "\n           [--tune tune]";
   std::cout << "\n";
   std::cout << "\n";
    
 }
-//________________________________________________________________________________________
 
 
 
+//____________________________________________________________________________
+genie::PDGCodeList * GetNeutrinoCodes(void)
+{
+  // split the comma separated list
+  vector<string> nuvec = genie::utils::str::Split(gOptNuPdgCodeList,  ",");
 
+  // fill in the PDG code list
+  genie::PDGCodeList * list = new genie::PDGCodeList;
+  vector<string>::const_iterator iter;
+  for(iter = nuvec.begin(); iter != nuvec.end(); ++iter) {
+    list->push_back( atoi(iter->c_str()) );
+  }
+  return list;
+}
 

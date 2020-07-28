@@ -22,6 +22,9 @@ if(NOT DEFINED ENV{LOG4CPP})
     message(FATAL_ERROR "LOG4CPP environment variable not defined")
 endif()
 
+
+
+
 # You need to tell CMake where to find the ROOT installation. This can be done in a number of ways:
 #   - ROOT built with classic configure/make use the provided $ROOTSYS/etc/cmake/FindROOT.cmake
 #   - ROOT built with CMake. Add in CMAKE_PREFIX_PATH the installation prefix for ROOT
@@ -74,10 +77,36 @@ endif()
 
 include_directories("${LOG4CPP_INC_DIR}")
 
+
+
+
+#---Add DK2NU library if DK2NU environment variable is defined
+set(DK2NU_LIBRARIES)
+if(DEFINED ENV{DK2NU})
+    set(DK2NU_DIR "$ENV{DK2NU}")
+    set(DK2NU_INC_DIR "${DK2NU_DIR}/include")
+    set(DK2NU_LIB_DIR "${DK2NU_DIR}/lib")
+    find_library(DK2NU_LIBRARY dk2nuGenie HINTS ${DK2NU_LIB_DIR} REQUIRED)
+    if(DK2NU_LIBRARY)
+        mark_as_advanced(DK2NU_LIBRARY)
+        list(APPEND DK2NU_LIBRARIES ${DK2NU_LIBRARY})
+    endif()
+    if(DK2NU_LIBRARIES)
+        list(REMOVE_DUPLICATES DK2NU_LIBRARIES)
+    endif()    
+    include_directories("${DK2NU_INC_DIR}")
+    add_definitions(-DWITH_DK2NU)
+endif()
+
+
+
+
+
+
 #---Create  a main program using the library
 add_executable(generate ${CMAKE_CURRENT_SOURCE_DIR}/src/generate.cpp)
 #add_executable(Main MainEvent.cxx)
-target_link_libraries(generate ${ROOT_LIBRARIES} ${GENIE_LIBRARIES} ${LOG4CPP_LIBRARIES})
+target_link_libraries(generate ${ROOT_LIBRARIES} ${GENIE_LIBRARIES} ${LOG4CPP_LIBRARIES} ${DK2NU_LIBRARIES})
 
 install(TARGETS generate
         EXPORT generate
