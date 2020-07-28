@@ -350,11 +350,13 @@ int main(int argc, char *argv[]) {
 
     flux_driver = dynamic_cast<genie::GFluxI*>(cylindTH1Flux);
   } 
+#ifdef WITH_DK2NU  
   else if (gOptFluxFileType.compare("gdk2nu")==0){
     gdk2nu = new genie::flux::GDk2NuFlux();
 //    gdk2nu->LoadBeamSimData(gOptFluxFileName,cfg);
     flux_driver = dynamic_cast<genie::GFluxI*>(gdk2nu);
   }
+#endif  
   else{
     std::cout << "unknown flux file type: exiting...";
     exit(1);   
